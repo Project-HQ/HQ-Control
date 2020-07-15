@@ -1,6 +1,8 @@
 {
   "hq_core_host":"127.0.0.1",
   "hq_core_port":"8080",
+  "redis_broker_host": "127.0.0.1",
+  "redis_broker_port": "6379",
   "workflows":[
     {
       "workflow_name":"face_finder_flow",
