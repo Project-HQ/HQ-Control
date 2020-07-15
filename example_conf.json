@@ -1,35 +1,40 @@
 {
-  "hq_core_host":"127.0.0.1",
-  "hq_core_port":"8080",
-  "redis_broker_host": "127.0.0.1",
-  "redis_broker_port": "6379",
-  "workflows":[
+  "hq_core_host": "127.0.0.1",
+  "hq_core_port": "8080",
+  "redis_broker_url": "amqp://username:passwd@127.0.0.1/hq_control",
+
+  "log_level": "DEBUG",
+  "log_location": "/var/log/hq_control/",
+  "log_format": "hqcontrol_%d%m%Y.log",
+
+  "workflows": [
     {
-      "workflow_name":"face_finder_flow",
-      "listeners":[
+      "workflow_name": "face_finder_flow",
+      "listeners": [
         {
-          "device_id":2,
-          "listen_to_device_ids":[1,4],
-          "execute":"python3 /path/to/face_finder/recognize_face.py"
+          "device_id": 2,
+          "listen_to_device_ids": [1,4],
+          "execute": "python3 /path/to/face_finder/recognize_face.py"
         },
         {
-          "device_id":3,
-          "listen_to_device_ids":[2],
-          "execute":"sh /path/to/face_finder/identify_face.sh"
+          "device_id": 3,
+          "listen_to_device_ids": [2],
+          "execute": "sh /path/to/face_finder/identify_face.sh"
         }
       ],
-      "timers":[
+      "timers": [
         {
-         "device_id":3,
-         "cron":"0 3 * * 0",
-         "execute":"python3 /path/to/face_finder/train_on_newly_identified_faces.py"
+          "device_id": 3,
+          "cron": "0 3 * * 0",
+          "execute": "python3 /path/to/face_finder/train_on_newly_identified_faces.py"
         },
         {
-         "device_id":3,
-         "cron":"0 10 * * 0",
-         "execute":"python3 /path/to/face_finder/rescan_unknown_faces.py"
+          "device_id": 3,
+          "cron": "0 10 * * 0",
+          "execute": "python3 /path/to/face_finder/rescan_unknown_faces.py"
         }
-     ]
+      ]
     }
+
   ]
 }

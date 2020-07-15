@@ -1,5 +1,6 @@
 import argparse
 import json
+from hqcontrol.tasks import execute_script
 
 def _parse_args(parser):
     parser.add_argument('conf', help="config path for daemon mode")
@@ -8,16 +9,18 @@ def _parse_args(parser):
 
 def _parse_config(cfg_path):
     with open(cfg_path) as config_file:
-        cfg = json.load(config_file)
-        BASE_URL = f'http://{{cfg["hq_core_host"]}}:{{cfg["hq_core_port"]}}'
+        CONFIG = json.load(config_file)
+        HQCORE_URL = f'http://{CONFIG["hq_core_host"]}:{CONFIG["hq_core_port"]}'
+
 
 def main():
     art="""
-      ░░╚══╗░╔═╔════╝
+      ░░═══╗░╔═╔════▒▒
       ╚═╦═╗╠═╩═╩╗╔═╦═╗
-      ░░║▒╠╣▒▒▒▒╠╣▒║▒║
-      ╔═╩═╝╠═╦═╦╝╚═╩═╝
-      ░░╔══╝░╚═╚════╗
+      ░░║▒╠╣▒░▒▒╠╣▒ ▒║
+        ╩═╝╠═╦═╦╝╚═╩═╝
+        ╔══╝ ╩═╚══╗ 
+     ░░═╝    ░══▒▒╝ ░░
 
     Welcome to HQ Control
     """
@@ -33,9 +36,6 @@ def main():
     else:
         if(args.verbose):
             print("Script Mode")
-    
-
-
 
 if __name__ == "__main__":
     main()
