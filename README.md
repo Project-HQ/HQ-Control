@@ -25,7 +25,9 @@ HQ Control is a smart task scheduler for HQ Core. It can listen for new entries 
     ```
 
 Run hq-control, passing path to config: `hqcontrol conf.json`
+
 Start Celery Worker: `celery -A hqcontrol worker -l info`
+
 Start Celery Beat: `celery beat -A hqcontrol -l info -S redbeat.RedBeatScheduler`
 
 **Setup Tip**
