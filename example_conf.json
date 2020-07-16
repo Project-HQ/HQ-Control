@@ -1,8 +1,6 @@
 {
   "hq_core_host": "127.0.0.1",
   "hq_core_port": "8080",
-  "redis_broker_url": "amqp://username:passwd@127.0.0.1/hq_control",
-
   "log_level": "DEBUG",
   "log_location": "/var/log/hq_control/",
   "log_format": "hqcontrol_%d%m%Y.log",
