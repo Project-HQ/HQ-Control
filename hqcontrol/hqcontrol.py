@@ -1,31 +1,100 @@
 import argparse
 import json
 from celery import Celery
+from .celery import app
 import time
 from .tasks import execute_script
-
-app = None
+from redbeat import RedBeatSchedulerEntry as Entry
+from redbeat import RedBeatScheduler
+from celery.schedules import crontab_parser, crontab
+import os
 CONFIG = None
 HQCORE_URL = None
 args= None
 
 def _parse_args(parser):
+    """Define cli arguments for hqcontrol
+    """
     parser.add_argument('conf', help="config path for daemon mode")
     parser.add_argument('-v',"--verbose", help="increase verbosity", action="store_true")
+    parser.add_argument('-f',"--flush", help="flush scheduled tasks", action="store_true")
 
 def _parse_workflow(wf):
-    print(f"Defining Listeners for Workflow[{wf['workflow_name']}]")
-    for listener in wf["listeners"]:
-        _handle_listener(listener)
-    print(f"Defining Timers for Workflow[{wf['workflow_name']}]")
-    for timer in wf["timers"]:
-        _handle_timer(timer)
+    """Define tasks for a workflow in the config
+    """
+    print(f"Defining Device Listeners for Workflow [{wf['workflow_name']}]")
+    schedule = []
+    for dlistener in wf["device_listeners"]:
+        _handle_device_listener(dlistener)
 
-def _handle_listener(listener):
-    print(f"Device #{listener['device_id']} is assigned to listen to devices {listener['listen_to_device_ids']}, trigger cmd <{listener['execute']}>")
+    print(f"Defining Periodic Tasks for Workflow [{wf['workflow_name']}]")
+    for timer in wf["timers"]:
+        event =_handle_timer(timer)
+        if event is not None:
+            schedule.append(event)
+    return schedule
+
+def _handle_device_listener(listener):
+    """Define a device listener task
+    """
+    print(f"\tDevice #{listener['device_id']} listens to devices {listener['listen_to_device_ids']} => <{listener['execute']}>")
+    #This will eventually turn into a database table listener
+    execute_script.delay(3,listener["execute"])
+
+def _key_to_cache(key):
+    """Log new task's key to .task_cache in case something goes wrong and we lose our keys
+    """
+    with open(".task_cache","a") as f:
+        f.write(key+"\n")
 
 def _handle_timer(timer):
-    print(f"Device #{timer['device_id']} is assigned to run on cron schedule <{timer['cron']}>, trigger cmd <{timer['execute']}>")
+    """ Define a cron-based task
+    """
+    print(f"\tDevice #{timer['device_id']} runs on <{timer['cron']}> => <{timer['execute']}>")
+    c = timer["cron"].split()
+    schedule =crontab(
+        minute= c[0],
+        hour= c[1],
+        day_of_month= c[2],
+        month_of_year= c[3],
+        day_of_week= c[4]
+    )
+    e = Entry(timer['slug'], 'hqcontrol.tasks.execute_script', schedule, args=[timer["device_id"], timer["execute"]], app=app)
+    e.save()
+    _key_to_cache(e.key.strip())
+    return e
+
+def _flush_schedule(schedule):
+    """Remove all tasks from redbeat scheduler by key
+    """
+    new_schedule= []
+    if (len(schedule) > 0):
+        for entry in schedule:
+            try:
+               entry.delete()
+            except Exception as ex:
+                print("Error: ",ex)
+                new_schedule.append(entry)
+    return new_schedule
+
+def _read_cached_scheduled_tasks():
+    """Read in any cached task keys from a previous run if they were left because of a crash
+    """
+    results = []
+    try:
+        with open(".task_cache","r") as f:
+            for key in f.readlines():
+                try:
+                    e = Entry.from_key(key.strip(), app=app)
+                    if e is not None:
+                        results.append(e)
+                except Exception as e:
+                    print("Task not found: ", e)
+    except FileNotFoundError as e:
+        return None
+    except Exception as e:
+        print("Error: ",e)
+    return results
 
 def main():
     art="""
@@ -34,7 +103,7 @@ def main():
         ░░║▒╠╣▒░▒▒╠╣▒ ▒║
         ╩═╝╠═╦═╦╝╚═╩═╝
         ╔══╝ ╩═╚══╗ 
-        ░░═╝    ░══▒▒╝ ░░
+        ░░═══╝  ░═╩═▒▒░░
 
     Welcome to HQ Control
     """
@@ -45,11 +114,33 @@ def main():
 
     with open(args.conf) as config_file:
         CONFIG = json.load(config_file)
-    
+
     HQCORE_URL = f'http://{CONFIG["hq_core_host"]}:{CONFIG["hq_core_port"]}'
 
+    scheduled_entries = _read_cached_scheduled_tasks() # load scheduled entry keys from cache
+
+    if(scheduled_entries is not None):
+        print("Flushing any cached schedules..")
+        _flush_schedule(scheduled_entries) # we want to clear out tasks before redefining them
+        if(args.flush):
+            exit()
+    else:
+        if(args.flush):
+            print("No cache found (.task_cache), nothing to flush")
+
     for workflow in CONFIG["workflows"]:
-        _parse_workflow(workflow)
+       scheduled_entries = _parse_workflow(workflow)
+
+    print("\nSetup Complete, start your celery workers. press ctrl+c once to gracefully shutdown.")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Removing scheduled tasks...")
+        _flush_schedule(scheduled_entries)
+        os.remove(".task_cache") # we deleted all of the scheduled tasks, no cache needed
+        print("Thank you for using HQ Control")
+        exit()
 
 if __name__ == "__main__":
     main()

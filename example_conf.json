@@ -12,24 +12,29 @@
         {
           "device_id": 2,
           "listen_to_device_ids": [1,4],
-          "execute": "python3 /path/to/face_finder/recognize_face.py"
+          "execute": "curl ipinfo.io/ip",
+          "slug": "listener_new_photo_to_face"
         },
         {
           "device_id": 3,
           "listen_to_device_ids": [2],
-          "execute": "sh /path/to/face_finder/identify_face.sh"
+          "execute": "curl ipinfo.io/ip",
+          "slug": "listener_new_photo_to_face"
         }
       ],
       "timers": [
         {
           "device_id": 3,
           "cron": "0 3 * * 0",
-          "execute": "python3 /path/to/face_finder/train_on_newly_identified_faces.py"
+          "execute": "curl ipinfo.io/ip",
+          "slug":"train_on_new_faces"
         },
         {
           "device_id": 3,
           "cron": "0 10 * * 0",
-          "execute": "python3 /path/to/face_finder/rescan_unknown_faces.py"
+          "execute": "curl ipinfo.io/ip",
+          "slug":"rescan_unidentified_faces"
+        
         }
       ]
     }
