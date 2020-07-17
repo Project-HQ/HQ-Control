@@ -12,7 +12,7 @@
         {
           "device_id": 2,
           "listen_to_device_ids": [1,4],
-          "execute": "curl ipinfo.io/ip",
+          "execute": "curl ipinfo.io/ip {{ log.id }}",
           "slug": "listener_new_photo_to_face"
         },
         {

@@ -8,6 +8,7 @@ from redbeat import RedBeatSchedulerEntry as Entry
 from redbeat import RedBeatScheduler
 from celery.schedules import crontab_parser, crontab
 import os
+import re
 CONFIG = None
 HQCORE_URL = None
 args= None
@@ -38,8 +39,38 @@ def _handle_device_listener(listener):
     """Define a device listener task
     """
     print(f"\tDevice #{listener['device_id']} listens to devices {listener['listen_to_device_ids']} => <{listener['execute']}>")
-    #This will eventually turn into a database table listener
-    execute_script.delay(3,listener["execute"])
+    #This will eventually turn into a database table listener, for now, it acts instead like the trigger
+
+    insertions = re.findall(r"(?<={{).*?(?=}})", listener["execute"])
+
+    triggered = { # triggered will get passed in as a parameter to the task handler. it is a dictionary of the log entry
+        "device_id": 2,
+        "id": 4,
+        "str_data": "test"
+    }
+
+    for raw_insert in insertions:
+        insertable = raw_insert.strip()
+        if insertable == "log.id":
+            # Replace with the log id of the log that triggered the listener
+            listener["execute"]=listener["execute"].replace("{{"+raw_insert+"}}",str(triggered["id"]))
+        elif insertable == "log.device_id":
+            listener["execute"]=listener["execute"].replace("{{"+raw_insert+"}}",str(triggered["device_id"]))
+        elif insertable == "log.float_data":
+            print(insertable)
+        elif insertable == "log.int_data":
+            print(insertable)
+        elif insertable == "log.str_data":
+            print(insertable)
+        elif insertable == "log.is_file":
+            print(insertable)
+        elif insertable == "log.json_data":
+            print(insertable)
+        else:
+            #We weren't able to find what this should be replaced with
+            print("Insertion unavailable. use tablename.column to insert data from caught lo, ie: {{log.id}}")
+    print("Command after insertions: ", listener["execute"])
+    #execute_script.delay(3,listener["execute"])
 
 def _key_to_cache(key):
     """Log new task's key to .task_cache in case something goes wrong and we lose our keys
