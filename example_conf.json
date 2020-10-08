@@ -1,0 +1,43 @@
+{
+  "hq_core_host": "127.0.0.1",
+  "hq_core_port": "8080",
+  "log_level": "DEBUG",
+  "log_location": "/var/log/hq_control/",
+  "log_format": "hqcontrol_%d%m%Y.log",
+
+  "workflows": [
+    {
+      "workflow_name": "face_finder_flow",
+      "listeners": [
+        {
+          "device_id": 2,
+          "listen_to_device_ids": [1,4],
+          "execute": "curl ipinfo.io/ip {{ log.id }}",
+          "slug": "listener_new_photo_to_face"
+        },
+        {
+          "device_id": 3,
+          "listen_to_device_ids": [2],
+          "execute": "curl ipinfo.io/ip",
+          "slug": "listener_new_photo_to_face"
+        }
+      ],
+      "timers": [
+        {
+          "device_id": 3,
+          "cron": "0 3 * * 0",
+          "execute": "curl ipinfo.io/ip",
+          "slug":"train_on_new_faces"
+        },
+        {
+          "device_id": 3,
+          "cron": "0 10 * * 0",
+          "execute": "curl ipinfo.io/ip",
+          "slug":"rescan_unidentified_faces"
+        
+        }
+      ]
+    }
+
+  ]
+}
